@@ -1,0 +1,92 @@
+import matplotlib.pyplot as plt
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+import numpy as np
+
+# 1. 資料生成
+n_samples = 250
+n_features = 2
+centers = 4
+shuffle = True
+cluster_std = 2.0
+random_state = 42
+
+# 使用 make_blobs 生成模擬資料
+X, y = make_blobs(n_samples=n_samples, n_features=n_features, centers=centers,
+                  shuffle=shuffle, cluster_std=cluster_std, random_state=random_state)
+
+# 打亂資料順序
+np.random.shuffle(X)
+
+# 2. 自己實現的KMeans演算法
+def kmeans(X, k, max_iters=100, tol=1e-4):
+    """
+    自己實現的 KMeans 演算法。
+
+    Parameters:
+    - X: 資料集
+    - k: 要分的群數
+    - max_iters: 最大迭代次數
+    - tol: 容忍誤差，當新舊群心的差異小於 tol 時停止迭代
+
+    Returns:
+    - centroids: 最終的群心
+    - labels: 資料點的分群標籤
+    """
+    n_samples, n_features = X.shape
+    # 隨機初始化群心
+    centroids = X[np.random.choice(n_samples, k, replace=False)]
+
+    for _ in range(max_iters):
+        # 計算每個資料點到群心的距離
+        distances = np.linalg.norm(X[:, np.newaxis, :] - centroids, axis=2)
+        # 將每個資料點分到距離最近的群
+        labels = np.argmin(distances, axis=1)
+        # 計算新的群心位置
+        new_centroids = np.array([X[labels == j].mean(axis=0) for j in range(k)])
+
+        # 如果新舊群心的差異小於容忍誤差，停止迭代
+        if np.linalg.norm(new_centroids - centroids) < tol:
+            break
+
+        centroids = new_centroids
+
+    return centroids, labels
+
+# 使用自己實現的KMeans演算法
+k = 4
+centroids_custom, labels_custom = kmeans(X, k)
+
+# 3. 視覺化結果
+def plot_clusters(X, labels, centroids, title, version):
+    """
+    視覺化分群結果。
+
+    Parameters:
+    - X: 資料集
+    - labels: 資料點的分群標籤
+    - centroids: 群心的位置
+    - title: 圖表標題
+    - version: 版本編號，用於儲存圖片
+    """
+    unique_labels = np.unique(labels)
+    for i in unique_labels:
+        cluster_points = X[labels == i]
+        plt.scatter(cluster_points[:, 0], cluster_points[:, 1], label=f'Cluster {i}')
+
+    plt.scatter(centroids[:, 0], centroids[:, 1],
+                marker='x', s=200, linewidths=3, color='black', label='Cluster Centers')
+
+    plt.title(title)
+    plt.legend()
+    plt.xlabel('Feature 1')
+    plt.ylabel('Feature 2')
+    plt.savefig(f'Fig_{version}.png')  # 儲存圖片
+    plt.show()
+
+# 附上分群前的資料點散圖
+plot_clusters(X, np.zeros_like(y), centroids_custom, 'Original Data (Custom)', '1')
+
+# 附上分群後的資料點散圖 (使用自己實現的KMeans)
+plot_clusters(X, labels_custom, centroids_custom, 'KMeans Clustering (My Own)', '2')
+
